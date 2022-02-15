@@ -15,8 +15,8 @@ import matplotlib.pyplot as plt
 def build_model():
     #architecture
     model = models.Sequential()
-    model.add(layers.Dense(64, activation = 'relu', input_shape = (train_data.shape[1],) ) )
-    model.add(layers.Dense(64, activation = 'relu'))
+    model.add(layers.Dense(32, activation = 'relu', input_shape = (train_data.shape[1],) ) )
+    #model.add(layers.Dense(32, activation = 'relu'))
     model.add(layers.Dense(1))
     
     #fit properties
@@ -40,7 +40,7 @@ test_data = test_data/sd_vals
 #setting up k-fold cross-validation
 k = 4       #number of data splits = number of models separately trained on diff combos of splits
 num_val_samples = len(train_data)//k
-n_epochs = 500
+n_epochs = 80
 all_scores = []
 all_mae_histories = []
 
@@ -76,9 +76,25 @@ for i in range(k):
     print('done')
 
 #plotting validation block performace over training epochs
-ave_mae_history = [np.mean(x[i] for x in all_mae_histories) for i in range(n_epochs)]
-plt.plot(range(1, len(ave_mae_history) + 1), ave_mae_history)
+ave_mae_history = [np.mean([x[i] for x in all_mae_histories]) for i in range(n_epochs)]
+
+def smooth_curve(points, factor = 0.9):
+    smoothed_points = []
+    for point in points:
+        if smoothed_points:
+            previous = smoothed_points[-1]
+            smoothed_points.append(previous * factor + point * (1 - factor))
+        else:
+            smoothed_points.append(point)
+    return smoothed_points
+                
+smooth_mae_history = smooth_curve(ave_mae_history[10:])
+plt.plot(range(1, len(smooth_mae_history) + 1), smooth_mae_history)
 plt.xlabel('Epochs')
-plt.ylabel('Validation MAE')
+plt.ylabel('smth. Validation MAE')
 plt.show()
+
+
+
+
     

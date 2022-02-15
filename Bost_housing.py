@@ -37,23 +37,34 @@ test_data = test_data - mean_vals
 test_data = test_data/sd_vals
 
 #setting up k-fold cross-validation
-k = 4       #number of data splits = number of separately trained models
-num_val_samples = np.floor(len(train_data)/k)
-num_epochs = 100
+k = 4       #number of data splits = number of models separately trained on diff combos of splits
+num_val_samples = len(train_data)//k
+n_epochs = 100
 all_scores = []
 
-for i in range k:
+for i in range(k):
     print('processing fold #', i)
     #current validation block
     val_data = train_data[i*num_val_samples:(i + 1)*num_val_samples]
     val_targets = train_targets[i*num_val_samples:(i + 1)*num_val_samples]
     
     #current training blocks (all the rest of the training data)
-    parital_train_data = np.concatenate(
-            train_data[:i*num_val_samples], 
-            train_data[(i+1)*num_val_samples:)],
+    partial_train_data = np.concatenate(
+            (train_data[:i*num_val_samples], 
+            train_data[(i+1)*num_val_samples:]),
             axis = 0)
-    parital_train_targets = np.concatenate(
-            train_targets[:i*num_val_samples], 
-            train_targets[(i+1)*num_val_samples:)],
+    partial_train_targets = np.concatenate(
+            (train_targets[:i*num_val_samples], 
+            train_targets[(i+1)*num_val_samples:]),
             axis = 0)
+    
+    #setting up and fitting model for current block of training data
+    model = build_model()
+    model.fit(partial_train_data, partial_train_targets,
+              epochs = n_epochs, batch_size = 1, verbose = 0)
+    #evaluating current block of cross-val data on currently fitted model
+    val_mse, val_mae = model.evaluate(val_data, val_targets, verbose = 0)
+    all_scores.append(val_mae)
+    
+    
+    

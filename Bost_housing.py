@@ -10,6 +10,7 @@ from keras.datasets import boston_housing
 from keras import models
 from keras import layers
 import numpy as np
+import matplotlib.pyplot as plt
 
 def build_model():
     #architecture
@@ -39,9 +40,11 @@ test_data = test_data/sd_vals
 #setting up k-fold cross-validation
 k = 4       #number of data splits = number of models separately trained on diff combos of splits
 num_val_samples = len(train_data)//k
-n_epochs = 100
+n_epochs = 500
 all_scores = []
+all_mae_histories = []
 
+#running fit, validating on different combinations of data blocks
 for i in range(k):
     print('processing fold #', i)
     #current validation block
@@ -60,11 +63,22 @@ for i in range(k):
     
     #setting up and fitting model for current block of training data
     model = build_model()
-    model.fit(partial_train_data, partial_train_targets,
+    history = model.fit(partial_train_data, partial_train_targets,
+                        validation_data = (val_data, val_targets),
               epochs = n_epochs, batch_size = 1, verbose = 0)
+    #keeping track of performance on val block over training epochs
+    mae_history = history.history['val_mae']
+    all_mae_histories.append(mae_history)
+        
     #evaluating current block of cross-val data on currently fitted model
     val_mse, val_mae = model.evaluate(val_data, val_targets, verbose = 0)
     all_scores.append(val_mae)
-    
-    
+    print('done')
+
+#plotting validation block performace over training epochs
+ave_mae_history = [np.mean(x[i] for x in all_mae_histories) for i in range(n_epochs)]
+plt.plot(range(1, len(ave_mae_history) + 1), ave_mae_history)
+plt.xlabel('Epochs')
+plt.ylabel('Validation MAE')
+plt.show()
     

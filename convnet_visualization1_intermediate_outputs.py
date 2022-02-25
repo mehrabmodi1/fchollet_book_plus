@@ -5,6 +5,8 @@ Created on Fri Feb 18 17:51:05 2022
 
 @author: mehrab
 This script visualises a single image convolved with the feature fitted to each unit of each layer and sequentially down-sampled. 
+It travels through unit space for a given image.
+
 Early layers should be simpler features. The model used here was entirely trained locally with 2000 base images augmented by transformations.
 
 #Notes:

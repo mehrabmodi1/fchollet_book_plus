@@ -26,47 +26,39 @@ conv_base = VGG16(weights = 'imagenet',
                  include_top = False,           #using only the bottom (early) convnet layers and not using the top, dense, classifier layers 
                  input_shape = [150, 150, 3])
 
-
-
-#reading in image data and saving output of pre-trained convnet to use as input to train a classifier later on
-datagen = ImageDataGenerator(rescale = 1./255)      #specifying data generator object
-batch_size = 20
-
-#function to run un-augmented data through conv-net to generate extracted features to fit classifier later
-def extract_features(directory, sample_count):
-    features = np.zeros(shape = (sample_count, 4, 4, 512))
-    labels = np.zeros(shape = (sample_count))
-    generator = datagen.flow_from_directory(
-            directory,
-            target_size = (150, 150),
-            batch_size = batch_size,
-            class_mode = 'binary')
-    i = 0
-    for inputs_batch, labels_batch in generator:
-        features_batch = conv_base.predict(inputs_batch)
-        features[i*batch_size:(i+1)*batch_size, :, :, :] = features_batch
-        labels[i*batch_size:(i+1)*batch_size] = labels_batch
-        i = i + 1
-        if i * batch_size >= sample_count:
-            break
-        return features, labels
-
-#getting extracted features for the three datasets we have     
-train_features, train_labels = extract_features(train_dir, 2000)
-validation_features, validation_labels = extract_features(validation_dir, 1000)
-test_features, test_labels = extract_features(test_dir, 1000)
-
-
-#flattening individual feature maps to vectors
-train_features = np.reshape(train_features, (2000, 4*4*512))
-validation_features = np.reshape(validation_features, (1000, 4*4*512))
-test_features = np.reshape(test_features, (1000, 4*4*512))
-
 #specifying classifier layers that receive extracted convnet features as inputs
 model = models.Sequential()
+model.add(conv_base)
+model.add(layers.Flatten())
 model.add(layers.Dense(256, activation = 'relu', input_dim = 4*4*512))
-model.add(layers.Dropout(0.5))
 model.add(layers.Dense(1, activation = 'sigmoid'))
+
+#freezing weights of the pre-trained convnet
+conv_base.trainable = False
+
+#setting up augmented data generation for training and regular data read-in for validation
+train_datagen = ImageDataGenerator(rescale = 1./255,
+                             rotation_range = 40,
+                             width_shift_range = 0.2,
+                             height_shift_range = 0.2,
+                             shear_range = 0.2,
+                             zoom_range = 0.2,
+                             horizontal_flip = True,
+                             fill_mode = 'nearest')      #specifying data generator object
+
+train_generator = train_datagen.flow_from_directory(train_dir,
+                                                    target_size = (150, 150),
+                                                    batch_size = 20,
+                                                    class_mode = 'binary'
+                                                    )
+
+test_datagen = ImageDataGenerator(rescale = 1./255)     #no data augmentation for test or validation data
+
+validation_generator = test_datagen.flow_from_directory(validation_dir,
+                                                        target_size = (150, 150),
+                                                        batch_size = 20,
+                                                        class_mode = 'binary'
+                                                        )
 
 #specifying fit type
 model.compile(optimizer = optimizers.RMSprop(lr = 2e-5),         #lr is learning rate
@@ -74,10 +66,11 @@ model.compile(optimizer = optimizers.RMSprop(lr = 2e-5),         #lr is learning
               metrics = 'acc')
 
 #specifying fitting procedure and running fit for Dense layers of classifier
-history = model.fit(train_features, train_labels,
+history = model.fit_generator(train_generator,
+                    steps_per_epoch = 100,                     
                     epochs = 30,
-                    batch_size = 20,
-                    validation_data = (validation_features, validation_labels)
+                    validation_data = (validation_generator),
+                    validation_steps = 50
                     )
 
 #plotting loss and accuracy

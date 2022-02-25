@@ -12,20 +12,24 @@ Note that re-running the fit doesn't generate an identical best-activation image
 This is not a simple offset, which is most noticeable in block 5 units
 """
 
+#Use big, pre-trained network
 from tensorflow.keras.applications import VGG16
+model = VGG16(weights = 'imagenet', include_top = False)
+
+#use home-trained dog/cat classifier  
+#from tensorflow.keras.models import load_model
+#model = load_model('/home/mehrab/ML_Datasets/saved_models/cats_and_dogs_small_2data_aug.h5')
+
+
 from tensorflow.keras import backend as K    #not sure why we aren't just using Numpy
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 tf.compat.v1.disable_eager_execution()      #gradients is deprecated in TF2
-import pdb
-
-model = VGG16(weights = 'imagenet', 
-              include_top = False)
 
 #manual input variables
 layer_name = 'block5_conv1'
-filter_index = 4
+filter_index = 3
 
 
 #processing fitted activation image tensor to plot as an image
